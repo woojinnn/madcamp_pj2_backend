@@ -40,7 +40,6 @@ module.exports = function (app, Profile) {
             }
 
             result.json({ result: 1 });
-
         });
     });
 

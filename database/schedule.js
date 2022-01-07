@@ -1,5 +1,5 @@
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+var mongoose = require('mongoose')
+    , Schema = mongoose.Schema;
 
 // DEFINE SCHEMA
 const timeSlotSchema = new Schema({
@@ -23,7 +23,10 @@ const scheduleSchema = new Schema({
         type: String,
         default: ""
     },
-    timeslots: [timeSlotSchema],
+    timeslots: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Timeslot'
+    }],
     members: [{
         type: Schema.Types.ObjectId,
         ref: 'Profile'

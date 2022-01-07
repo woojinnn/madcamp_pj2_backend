@@ -37,12 +37,13 @@ connect_db();
 // DEFINE MODEL
 var Book = require('./database/book');
 var Profile = require('./database/profile');
+var Timeslot = require('./database/timeslot');
 var Schedule = require('./database/schedule');
 
 // CONFIGURE: ROUTER
 var router_book = require("./routes/book_api")(app, Book);
 var router_profile = require("./routes/profile_api")(app, Profile);
-var router_schedule = require("./routes/schedule_api")(app, Schedule);
+var router_schedule = require("./routes/schedule_api")(app, Schedule, Timeslot);
 
 // RUN SERVER
 var server = app.listen(port, function () {
