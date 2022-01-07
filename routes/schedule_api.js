@@ -1,84 +1,95 @@
-module.exports = function (app, Book) {
-    // GET ALL BOOKS
-    app.get('/api/books', function (req, res) {
-        Book.find(function (err, books) {
-            if (err) return res.status(500).send({ error: 'database failure' });
-            res.json(books);
+const schedule = require("../database/schedule");
+
+function make_time_slice(dates, start_time, end_time) {
+    var slots = [];
+    min30 = 1000 * 60 * 30;
+
+    for (day of dates) {
+        console.log(day);
+        let start = new Date(day + "Z" + start_time + ":00");
+        let end = new Date(day + "Z" + end_time + ":00");
+
+        for (let q = start; q < end; q = new Date(q.getTime() + min30)) {
+            slots.push(q);
+        }
+    }
+    return slots;
+}
+
+
+module.exports = function (app, Schedule) {
+    /* GET APIS */
+    // RETURNS A LIST OF SCHEDULES CONTAINING USERID
+    app.get('/api/schedules/userId/:userId', function (request, result) {
+        Schedule.find({ 'members._id': request.params.userId }, function (err, schedules) {
+            if (err) return result.status(500).send({ error: 'database failure' });
+            result.json(schedules);
         })
     });
 
-    // GET SINGLE BOOK
-    app.get('/api/books/:book_id', function (req, res) {
-        Book.findOne({ _id: req.params.book_id }, function (err, book) {
-            if (err) return res.status(500).json({ error: err });
-            if (!book) return res.status(404).json({ error: 'book not found' });
-            res.json(book);
+    // RETURNS LIST OF SCHEDFULES CORRESPONDING TO THE TITLE
+    app.get('api/schedules/title/:title', function (request, result) {
+        Schedule.find({ title: request.params.title }, function (err, schedules) {
+            if (err) return result.status(500).send({ error: 'database failure' });
+            result.json(schedules);
         })
     });
 
-    // GET BOOK BY AUTHOR
-    app.get('/api/books/author/:author', function (req, res) {
-        Book.find({ author: req.params.author }, { _id: 0, title: 1, published_date: 1 }, function (err, books) {
-            if (err) return res.status(500).json({ error: err });
-            if (books.length === 0) return res.status(404).json({ error: 'book not found' });
-            res.json(books);
-        })
-    });
-
-    // CREATE BOOK
-    app.post('/api/books', function (req, res) {
-        var book = new Book();
-        book.title = req.body.title;
-        book.author = req.body.author;
-        book.published_date = new Date(req.body.published_date);
-
-        book.save(function (err) {
-            if (err) {
-                console.error(err);
-                res.json({ result: 0 });
-                return;
-            }
-
-            res.json({ result: 1 });
-
+    // RETURNS SCHEDULE CORRESPONDING TO THE SCHEDULEID
+    app.get('api/schedules/scheduleId/:scheduleId', function (request, result) {
+        Schedule.findOne({ _id: request.params.scheduleId }, function (err, schedule) {
+            if (err) return result.status(500).json({ error: err });
+            if (!schedule) return result.status(404).json({ error: 'schedule not found' });
+            res.json(schedule);
         });
     });
 
-    // UPDATE THE BOOK
-    app.put('/api/books/:book_id', function (req, res) {
-        Book.update({ _id: req.params.book_id }, { $set: req.body }, function (err, output) {
-            if (err) res.status(500).json({ error: 'database failure' });
-            console.log(output);
-            if (!output.n) return res.status(404).json({ error: 'book not found' });
-            res.json({ message: 'book updated' });
-        })
-        /* [ ANOTHER WAY TO UPDATE THE BOOK ]
-                Book.findById(req.params.book_id, function(err, book){
-                if(err) return res.status(500).json({ error: 'database failure' });
-                if(!book) return res.status(404).json({ error: 'book not found' });
-                if(req.body.title) book.title = req.body.title;
-                if(req.body.author) book.author = req.body.author;
-                if(req.body.published_date) book.published_date = req.body.published_date;
-                book.save(function(err){
-                    if(err) res.status(500).json({error: 'failed to update'});
-                    res.json({message: 'book updated'});
-                });
-            });
-        */
+    /* POST APIS */
+    // CREATE SCHEDULE
+    app.post('/api/schedules', function (request, result) {
+        // set schedule values
+        var schedule = new Schedule();
+        schedule.title = request.body.title;    // essential
+        if (request.body.passwd) { schedule.passwd = request.body.passwd; }
+        schedule.members = [];
+        const timeSlice = make_time_slice(request.body.days, request.body.start_time, request.body.end_time);
+        timeSlice.forEach(
+            elem => {
+                var timeslot = new Timeslot();
+                timeslot.start = elem;
+                timeslot.members = [];
+                schedule.timeslots.put(timeslot);
+            }
+        );
+
+        schedule.save(function (err) {
+            if (err) {
+                console.error(err);
+                result.json({ result: 0 });
+                return;
+            }
+
+            result.json({ result: 1 });
+        });
+        result.end();
     });
 
-    // DELETE BOOK
-    app.delete('/api/books/:book_id', function (req, res) {
-        Book.remove({ _id: req.params.book_id }, function (err, output) {
-            if (err) return res.status(500).json({ error: "database failure" });
 
-            /* ( SINCE DELETE OPERATION IS IDEMPOTENT, NO NEED TO SPECIFY )
-            if(!output.result.n) return res.status(404).json({ error: "book not found" });
-            res.json({ message: "book deleted" });
-            */
-
-            res.status(204).end();
-        })
+    /* PUT APIS */
+    app.put('api/schedules/:schedule_id', function (request, result) {
+        result.end();
     });
 
+
+    /* DELETE APIS */
+    app.delete('/api/schedules/:schedule_id', function (request, result) {
+        // Profile.remove({ _id: request.params.userId }, function (err, output) {
+        //     if (err) {
+        //         return result.status(500).json({ error: "database failure" });
+        //     }
+
+        //     result.status(204).end();
+        // })
+        result.end();
+    });
 }

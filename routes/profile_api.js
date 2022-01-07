@@ -25,8 +25,8 @@ module.exports = function (app, Profile) {
     // CREATE PROFILE
     app.post('/api/profiles', function (request, result) {
         var profile = new Profile();
-        if (request.body.userId) { profile.userId = request.body.userId; }
-        if (request.body.name) { profile.name = request.body.name; }
+        profile.userId = request.body.userId;
+        profile.name = request.body.name;
         if (request.body.imageUrl) { profile.imageUrl = request.body.imageUrl; }
         if (request.body.email) { profile.email = request.body.email; }
         if (request.body.gender) { profile.gender = request.body.gender; }

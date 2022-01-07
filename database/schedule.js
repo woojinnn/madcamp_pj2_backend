@@ -7,12 +7,9 @@ const timeSlotSchema = new Schema({
         type: Date,
         required: true
     },
-    end: {
-        type: Date,
-        required: true
-    },
     members: [{
         type: Schema.Types.ObjectId,
+        ref: 'Profile',
         required: true
     }]
 });
@@ -20,10 +17,11 @@ const timeSlotSchema = new Schema({
 const scheduleSchema = new Schema({
     title: {
         type: String,
-        required: true
+        required: true,
     },
     passwd: {
-        type: String
+        type: String,
+        default: ""
     },
     timeslots: [timeSlotSchema],
     members: [{

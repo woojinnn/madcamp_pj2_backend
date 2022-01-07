@@ -12,6 +12,7 @@ module.exports = function (app, Book) {
         Book.findOne({ _id: req.params.book_id }, function (err, book) {
             if (err) return res.status(500).json({ error: err });
             if (!book) return res.status(404).json({ error: 'book not found' });
+            console.log(book);
             res.json(book);
         })
     });
