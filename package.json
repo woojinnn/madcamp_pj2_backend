@@ -1,0 +1,24 @@
+{
+  "name": "madcamp_pj2_backend",
+  "version": "1.0.0",
+  "description": "when2meet Backend",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/woojinnn/madcamp_pj2_backend.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/woojinnn/madcamp_pj2_backend/issues"
+  },
+  "homepage": "https://github.com/woojinnn/madcamp_pj2_backend#readme",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "express": "^4.17.2",
+    "mongoose": "^6.1.5"
+  }
+}
