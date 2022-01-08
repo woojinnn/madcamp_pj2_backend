@@ -7,11 +7,11 @@ const timeSlotSchema = new Schema({
         type: Date,
         required: true
     },
-    members: [{
-        type: Schema.Types.ObjectId,
+    members: {  // available times
+        type: [Schema.Types.ObjectId],
         ref: 'Profile',
         required: true
-    }]
+    }
 });
 
 module.exports = mongoose.model('Timeslot', timeSlotSchema);
