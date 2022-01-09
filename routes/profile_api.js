@@ -2,10 +2,10 @@ module.exports = function (app, Profile) {
     /* GET APIS */
     // GET SINGLE PROFILE WITH USER ID
     app.get('/api/profiles/userId/:userId', function (request, result) {
-        Profile.findOne({ userId: request.params.userId }, function (err, profile) {
+        Profile.findOne({ _id: request.params.userId }, function (err, profile) {
             if (err) return result.status(500).json({ error: err })
             if (!profile) return result.status(404).json({ error: 'proifle not found' })
-
+            console.log(profile)
             result.json(profile)
         })
     })
@@ -24,7 +24,6 @@ module.exports = function (app, Profile) {
     // CREATE PROFILE
     app.post('/api/profiles', function (request, result) {
         Profile.findOne({ userId: request.body.userId }, function (err, profile) {
-            console.log("profile: " + profile)
             if (err) return result.status(500).json({ error: err })
 
             if (profile) {
@@ -58,14 +57,12 @@ module.exports = function (app, Profile) {
     // UPDATE PROFILE WITH USER_ID
     app.put('/api/profiles/:userId', function (request, result) {
         Profile.findOne({ userId: request.params.userId }, function (err, profile) {
-            console.log(profile);
             if (err) return result.status(500).json({ error: 'database failure' });
             if (!profile) return result.status(404).json({ error: 'Profile not found' });
 
             if (request.body.name) { profile.name = request.body.name; }
             if (request.body.imageUrl) { profile.imageUrl = request.body.imageUrl; }
             if (request.body.email) { profile.email = request.body.email; }
-            console.log(profile);
 
             profile.save(function (err) {
                 if (err) {

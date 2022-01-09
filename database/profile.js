@@ -21,6 +21,6 @@ const profileSchema = new Schema({
         type: String,
         default: ""
     }
-});
+}, { versionKey: false });
 
 module.exports = mongoose.model('Profile', profileSchema);

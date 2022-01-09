@@ -12,6 +12,6 @@ const timeSlotSchema = new Schema({
         ref: 'Profile',
         required: true
     }
-});
+}, { versionKey: false });
 
 module.exports = mongoose.model('Timeslot', timeSlotSchema);

@@ -26,11 +26,12 @@ module.exports = function (app, Schedule, Timeslot) {
     /* GET APIS */
     // GET ALL SCHEDULES
     app.get('/api/schedules', function (request, result) {
-        Schedule.find(function (err, schedules) {
-            if (err) return result.status(500).send({ error: 'database failure' })
-            result.json(schedules)
-        })
-    });
+        Schedule.find()
+            .exec(function (err, schedules) {
+                if (err) return result.status(500).send({ error: 'database failure' })
+                result.json(schedules)
+            })
+    })
 
     // RETURNS A LIST OF SCHEDULES CONTAINING USERID
     app.get('/api/schedules/userId/:userId', function (request, result) {
@@ -64,6 +65,14 @@ module.exports = function (app, Schedule, Timeslot) {
         })
     })
 
+    // RETURN TIMESLOT CORRESPONDING TO ID
+    app.get('/api/timeslots/:timeslotId', function (request, result) {
+        Timeslot.findOne({ _id: request.params.timeslotId }, function (err, timeslot) {
+            if (err) return result.status(500).send({ error: 'database failure' })
+            result.json(timeslot)
+        })
+    })
+
     // RETURNS SCHEDULE CORRESPONDING TO THE SCHEDULEID
     app.get('/api/schedules/scheduleId/:scheduleId', function (request, result) {
         console.log(request.params.scheduleId)
@@ -82,6 +91,7 @@ module.exports = function (app, Schedule, Timeslot) {
         let schedule = new Schedule()
         schedule.title = request.body.title
         schedule.members = []
+        schedule.days = request.body.days
         if (request.body.passwd) { schedule.passwd = request.body.passwd }
 
         const timeSlice = make_time_slice(request.body.days, request.body.start_time, request.body.end_time)
@@ -92,14 +102,12 @@ module.exports = function (app, Schedule, Timeslot) {
                 timeslot.start = elem
                 timeslot.members = []
                 timeslot.save()
-                console.log(timeslot)
-                console.log(timeslot._id)
                 ts_list.push(timeslot._id)
             }
         )
         schedule.timeslots = ts_list
 
-        schedule.save().then(result.json({ result: 1 }))
+        schedule.save().then(result.json({ _id: schedule["_id"] }))
     })
 
 
@@ -112,64 +120,70 @@ module.exports = function (app, Schedule, Timeslot) {
             }
         )
 
-        const userId = mongoose.Types.ObjectId(request.body.userId)
+        profile.findOne({ userId: request.body.userId }).exec(
+            function (err, user) {
 
-        Schedule.findOne({ _id: request.params.scheduleId })
-            .populate({
-                path: 'timeslots',
-                populate: {
-                    path: 'members'
-                }
-            })
-            .exec(function (err, schedule) {
-                if (err) return result.status(500).json({ error: 'database failure' })
-                if (!schedule) return result.status(404).json({ error: 'Schedule not found' })
+                const user_id = mongoose.Types.ObjectId(user["_id"])
 
-                let contains_member = false
-                schedule["members"].forEach(
-                    (mem) => {
-                        if (mem["_id"].equals(userId)) {
-                            contains_member = true
+                Schedule.findOne({ _id: request.params.scheduleId })
+                    .populate({
+                        path: 'timeslots',
+                        populate: {
+                            path: 'members'
                         }
-                    }
-                )
-                if (!contains_member) {
-                    // This member is initially introduced
-                    Schedule.updateOne({ _id: schedule["_id"] }, { $push: { members: userId } }, function (err, res) {
-                        if (err) console.log(err)
                     })
-                }
+                    .exec(function (err, schedule) {
+                        if (err) return result.status(500).json({ error: 'database failure' })
+                        if (!schedule) return result.status(404).json({ error: 'Schedule not found' })
 
-                const timeslots = schedule["timeslots"]
-                for (let timeslot of timeslots) {
-                    let contains_id = false
-                    timeslot["members"].forEach(
-                        elem => {
-                            if (elem["_id"].equals(userId)) {
-                                contains_id = true
+                        let contains_member = false
+                        schedule["members"].forEach(
+                            (mem) => {
+                                if (mem["_id"].equals(user_id)) {
+                                    contains_member = true
+                                }
+                            }
+                        )
+                        if (!contains_member) {
+                            // This member is initially introduced
+                            Schedule.updateOne({ _id: schedule["_id"] }, { $push: { members: user_id } }, function (err, res) {
+                                if (err) console.log(err)
+                            })
+                        }
+
+                        const timeslots = schedule["timeslots"]
+                        for (let timeslot of timeslots) {
+                            let contains_id = false
+                            timeslot["members"].forEach(
+                                elem => {
+                                    if (elem["_id"].equals(user_id)) {
+                                        contains_id = true
+                                    }
+                                }
+                            )
+
+                            if (contains_id &&
+                                (available_dic[timeslot.start] === false)) {
+                                // timeslot already contains member
+                                // and that member isn't available at that time
+                                const updated = timeslot.members.filter((elem) => (!elem["_id"].equals(user_id)))
+                                Timeslot.updateOne({ _id: timeslot._id }, { $set: { members: updated } }, function (err, res) {
+                                    if (err) console.log(err)
+                                })
+                            } else if (!contains_id &&
+                                (available_dic[timeslot.start] === true)) {
+                                // timeslot doesn't contain member
+                                // and that member is available at that time
+                                Timeslot.updateOne({ _id: timeslot._id }, { $push: { members: user_id } }, function (err, res) {
+                                    if (err) console.log(err)
+                                })
                             }
                         }
-                    )
+                    })
+                result.json({ message: 'profile updated' })
 
-                    if (contains_id &&
-                        (available_dic[timeslot.start] === false)) {
-                        // timeslot already contains member
-                        // and that member isn't available at that time
-                        const updated = timeslot.members.filter((elem) => (!elem["_id"].equals(userId)))
-                        Timeslot.updateOne({ _id: timeslot._id }, { $set: { members: updated } }, function (err, res) {
-                            if (err) console.log(err)
-                        })
-                    } else if (!contains_id &&
-                        (available_dic[timeslot.start] === true)) {
-                        // timeslot doesn't contain member
-                        // and that member is available at that time
-                        Timeslot.updateOne({ _id: timeslot._id }, { $push: { members: userId } }, function (err, res) {
-                            if (err) console.log(err)
-                        })
-                    }
-                }
-            })
-        result.json({ message: 'profile updated' })
+            }
+        )
     })
 
 

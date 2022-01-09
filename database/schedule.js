@@ -15,10 +15,13 @@ const scheduleSchema = new Schema({
         type: [Schema.Types.ObjectId],
         ref: 'Timeslot'
     },
+    days: {
+        type: [String]
+    },
     members: {
         type: [Schema.Types.ObjectId],
         ref: 'Profile'
     }
-});
+}, { versionKey: false });
 
 module.exports = mongoose.model('Schedule', scheduleSchema);

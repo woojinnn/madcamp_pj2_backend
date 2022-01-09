@@ -19,7 +19,7 @@ const connect_db = () => {
         mongoose.set('debug', true);
     }
 
-    const mongodb_uri = 'mongodb://localhost/mongodb_tutorial';
+    const mongodb_uri = 'mongodb://localhost/week2_0';
     mongoose.connect(mongodb_uri)
         .then(() => console.log("Succeed to connect MongoDB"))
         .catch(error => console.log('Failed to connect MongoDB', error));
