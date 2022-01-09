@@ -1,11 +1,12 @@
 module.exports = function (app, Profile) {
+    /* GET APIS */
     // GET SINGLE PROFILE WITH USER ID
     app.get('/api/profiles/userId/:userId', function (request, result) {
         Profile.findOne({ userId: request.params.userId }, function (err, profile) {
-            if (err) return result.status(500).json({ error: err });
-            if (!profile) return result.status(404).json({ error: 'proifle not found' });
+            if (err) return result.status(500).json({ error: err })
+            if (!profile) return result.status(404).json({ error: 'proifle not found' })
 
-            result.json(profile);
+            result.json(profile)
         })
     })
 
@@ -19,26 +20,41 @@ module.exports = function (app, Profile) {
         })
     })
 
+    /* POST APIS */
     // CREATE PROFILE
     app.post('/api/profiles', function (request, result) {
-        var profile = new Profile()
-        profile.userId = request.body.userId
-        profile.name = request.body.name
-        if (request.body.imageUrl) { profile.imageUrl = request.body.imageUrl }
-        if (request.body.email) { profile.email = request.body.email }
-        if (request.body.gender) { profile.gender = request.body.gender }
-        if (request.body.age) { profile.age = request.body.age }
+        Profile.findOne({ userId: request.body.userId }, function (err, profile) {
+            console.log("profile: " + profile)
+            if (err) return result.status(500).json({ error: err })
 
-        profile.save(function (err) {
-            if (err) {
-                console.error(err)
-                return result.json({ result: 0 })
+            if (profile) {
+                // profile already exists
+                console.log("Already exists")
+                return result.json({ result: 1 })
             }
 
-            result.json({ result: 1 })
+            if (!profile) {
+                // new profile
+                var profile = new Profile()
+                profile.userId = request.body.userId
+                profile.name = request.body.name
+                if (request.body.imageUrl) { profile.imageUrl = request.body.imageUrl }
+                if (request.body.email) { profile.email = request.body.email }
+
+                profile.save(function (err) {
+                    if (err) {
+                        console.error(err)
+                        return result.json({ result: 0 })
+                    }
+
+                    return result.json({ result: 1 })
+                })
+            }
+
         })
     })
 
+    /* PUT APIS */
     // UPDATE PROFILE WITH USER_ID
     app.put('/api/profiles/:userId', function (request, result) {
         Profile.findOne({ userId: request.params.userId }, function (err, profile) {
@@ -49,8 +65,6 @@ module.exports = function (app, Profile) {
             if (request.body.name) { profile.name = request.body.name; }
             if (request.body.imageUrl) { profile.imageUrl = request.body.imageUrl; }
             if (request.body.email) { profile.email = request.body.email; }
-            if (request.body.gender) { profile.gender = request.body.gender; }
-            if (request.body.age) { profile.age = request.body.age; }
             console.log(profile);
 
             profile.save(function (err) {
@@ -64,9 +78,11 @@ module.exports = function (app, Profile) {
         });
 
     });
+
+    /* DELETE APIS */
     // DELETE PROFILE
     app.delete('/api/profiles/:userId', function (request, result) {
-        Profile.remove({ _id: request.params.userId }, function (err, output) {
+        Profile.remove({ userId: request.params.userId }, function (err, output) {
             if (err) {
                 return result.status(500).json({ error: "database failure" });
             }

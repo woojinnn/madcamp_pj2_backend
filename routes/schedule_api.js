@@ -1,4 +1,6 @@
 const mongoose = require("mongoose")
+const profile = require("../database/profile")
+const timeslot = require("../database/timeslot")
 
 function generate_date(day, time) {
     return new Date(day + "Z" + time + ":00")
@@ -22,21 +24,45 @@ function make_time_slice(dates, start_time, end_time) {
 
 module.exports = function (app, Schedule, Timeslot) {
     /* GET APIS */
-    // RETURNS A LIST OF SCHEDULES CONTAINING USERID
-    app.get('/api/schedules/userId/:userId', function (request, result) {
-        Schedule.find({ 'members._id': request``.params.userId }, function (err, schedules) {
+    // GET ALL SCHEDULES
+    app.get('/api/schedules', function (request, result) {
+        Schedule.find(function (err, schedules) {
             if (err) return result.status(500).send({ error: 'database failure' })
             result.json(schedules)
         })
     });
 
+    // RETURNS A LIST OF SCHEDULES CONTAINING USERID
+    app.get('/api/schedules/userId/:userId', function (request, result) {
+        Schedule.find(function (err, schedules) {
+            console.log(schedules)
+            if (err)
+                return result.status(500).send({ error: 'database failure' })
+
+            let filtered = []
+            schedules.forEach(
+                (elem) => {
+                    const members = elem["members"]
+                    members.forEach(
+                        (mem) => {
+                            if (mem["userId"] === request.parmas.userId) {
+                                filtered.push(sch)
+                            }
+                        }
+                    )
+                }
+            )
+            result.json(filtered)
+        })
+    })
+
     // RETURNS LIST OF SCHEDFULES CORRESPONDING TO THE TITLE
     app.get('/api/schedules/title/:title', function (request, result) {
         Schedule.find({ title: request.params.title }, function (err, schedules) {
             if (err) return result.status(500).send({ error: 'database failure' })
-            result.json(schedules);
+            result.json(schedules)
         })
-    });
+    })
 
     // RETURNS SCHEDULE CORRESPONDING TO THE SCHEDULEID
     app.get('/api/schedules/scheduleId/:scheduleId', function (request, result) {
@@ -46,8 +72,8 @@ module.exports = function (app, Schedule, Timeslot) {
             if (err) return result.status(500).json({ error: err })
             if (!schedule) return result.status(404).json({ error: 'schedule not found' })
             result.json(schedule)
-        });
-    });
+        })
+    })
 
     /* POST APIS */
     // CREATE SCHEDULE
@@ -56,9 +82,9 @@ module.exports = function (app, Schedule, Timeslot) {
         let schedule = new Schedule()
         schedule.title = request.body.title
         schedule.members = []
-        if (request.body.passwd) { schedule.passwd = request.body.passwd; }
+        if (request.body.passwd) { schedule.passwd = request.body.passwd }
 
-        const timeSlice = make_time_slice(request.body.days, request.body.start_time, request.body.end_time);
+        const timeSlice = make_time_slice(request.body.days, request.body.start_time, request.body.end_time)
         let ts_list = []
         timeSlice.forEach(
             elem => {
@@ -71,7 +97,7 @@ module.exports = function (app, Schedule, Timeslot) {
                 ts_list.push(timeslot._id)
             }
         )
-        schedule.timeslots = ts_list;
+        schedule.timeslots = ts_list
 
         schedule.save().then(result.json({ result: 1 }))
     })
@@ -99,11 +125,25 @@ module.exports = function (app, Schedule, Timeslot) {
                 if (err) return result.status(500).json({ error: 'database failure' })
                 if (!schedule) return result.status(404).json({ error: 'Schedule not found' })
 
-                const timeslots = schedule["timeslots"]
+                let contains_member = false
+                schedule["members"].forEach(
+                    (mem) => {
+                        if (mem["_id"].equals(userId)) {
+                            contains_member = true
+                        }
+                    }
+                )
+                if (!contains_member) {
+                    // This member is initially introduced
+                    Schedule.updateOne({ _id: schedule["_id"] }, { $push: { members: userId } }, function (err, res) {
+                        if (err) console.log(err)
+                    })
+                }
 
+                const timeslots = schedule["timeslots"]
                 for (let timeslot of timeslots) {
                     let contains_id = false
-                    timeslot.members.forEach(
+                    timeslot["members"].forEach(
                         elem => {
                             if (elem["_id"].equals(userId)) {
                                 contains_id = true
@@ -117,19 +157,19 @@ module.exports = function (app, Schedule, Timeslot) {
                         // and that member isn't available at that time
                         const updated = timeslot.members.filter((elem) => (!elem["_id"].equals(userId)))
                         Timeslot.updateOne({ _id: timeslot._id }, { $set: { members: updated } }, function (err, res) {
-                            if (err) console.log(err);
+                            if (err) console.log(err)
                         })
                     } else if (!contains_id &&
                         (available_dic[timeslot.start] === true)) {
                         // timeslot doesn't contain member
                         // and that member is available at that time
                         Timeslot.updateOne({ _id: timeslot._id }, { $push: { members: userId } }, function (err, res) {
-                            if (err) console.log(err);
+                            if (err) console.log(err)
                         })
                     }
                 }
             })
-        result.json({ message: 'profile updated' });
+        result.json({ message: 'profile updated' })
     })
 
 
@@ -153,6 +193,7 @@ module.exports = function (app, Schedule, Timeslot) {
                 })
 
             // Delete whole schedule
+
             Schedule.remove({ _id: request.params.scheduleId }, function (err, output) {
                 if (err) {
                     return result.status(500).json({ error: "database failure" })

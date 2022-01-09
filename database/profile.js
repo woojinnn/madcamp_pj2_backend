@@ -20,14 +20,6 @@ const profileSchema = new Schema({
     email: {
         type: String,
         default: ""
-    },
-    gender: {
-        type: Boolean,
-        default: true
-    },    // male: True, female: False
-    age: {
-        type: Number,
-        default: -1
     }
 });
 
