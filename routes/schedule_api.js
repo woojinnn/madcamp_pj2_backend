@@ -92,6 +92,8 @@ module.exports = function (app, Schedule, Timeslot) {
         schedule.title = request.body.title
         schedule.members = []
         schedule.days = request.body.days
+        schedule.start_time = request.body.start_time
+        schedule.end_time = request.body.end_time
         if (request.body.passwd) { schedule.passwd = request.body.passwd }
 
         const timeSlice = make_time_slice(request.body.days, request.body.start_time, request.body.end_time)
@@ -188,11 +190,10 @@ module.exports = function (app, Schedule, Timeslot) {
 
 
     /* DELETE APIS */
-    app.delete('/api/schedules/:scheduleId', function (request, result) {
+    app.delete('/api/schedules/:scheduleId/:userId', function (request, result) {
         const scheduleId = request.params.scheduleId
-        const userId = mongoose.Types.ObjectId(request.body.userId)
 
-        if (request.body.userId === -1) {
+        if (request.params.userId === "-1") {
             Schedule.findOne({ _id: scheduleId }).
                 exec(function (err, schedule) {
                     if (err) return result.status(500).json({ error: 'database failure' })
@@ -207,46 +208,66 @@ module.exports = function (app, Schedule, Timeslot) {
                 })
 
             // Delete whole schedule
-
-            Schedule.remove({ _id: request.params.scheduleId }, function (err, output) {
+            Schedule.deleteOne({ _id: request.params.scheduleId }, function (err, output) {
                 if (err) {
                     return result.status(500).json({ error: "database failure" })
                 }
                 return result.status(204).end()
             })
         } else {
-            // Delete user in scheduleId
-            Schedule.findOne({ _id: scheduleId })
-                .populate({
-                    path: 'timeslots',
-                    populate: {
-                        path: 'members'
-                    }
-                })
-                .exec(function (err, schedule) {
-                    if (err) return result.status(500).json({ error: 'database failure' })
-                    if (!schedule) return result.status(404).json({ error: 'Schedule not found' })
+            profile.findOne({ userId: request.params.userId }).exec(
+                function (err, user) {
+                    const userId = mongoose.Types.ObjectId(user["_id"])
 
-                    const timeslots = schedule["timeslots"]
+                    // Delete user in scheduleId
+                    Schedule.findOne({ _id: scheduleId })
+                        .populate({
+                            path: 'timeslots',
+                            populate: {
+                                path: 'members'
+                            }
+                        })
+                        .exec(function (err, schedule) {
+                            if (err) return result.status(500).json({ error: 'database failure' })
+                            if (!schedule) return result.status(404).json({ error: 'Schedule not found' })
 
-                    for (let timeslot of timeslots) {
-                        let contains_id = false
-                        timeslot.members.forEach(
-                            elem => {
-                                if (elem["_id"].equals(userId)) {
-                                    contains_id = true
+                            // delete member from schedule list
+                            let contains_member = false
+                            schedule["members"].forEach(
+                                (mem) => {
+                                    if (mem["_id"].equals(userId)) {
+                                        contains_member = true
+                                    }
+                                }
+                            )
+                            if (contains_member) {
+                                const filtered_members = schedule["members"].filter((elem) => (!elem["_id"].equals(userId)))
+                                Schedule.updateOne({ _id: schedule["_id"] }, { $set: { members: filtered_members } }, function (err, res) {
+                                    if (err) console.log(err)
+                                })
+                            }
+
+                            // delete member in timeslots
+                            const timeslots = schedule["timeslots"]
+                            for (let timeslot of timeslots) {
+                                let contains_id = false
+                                timeslot.members.forEach(
+                                    elem => {
+                                        if (elem["_id"].equals(userId)) {
+                                            contains_id = true
+                                        }
+                                    }
+                                )
+
+                                if (contains_id) {
+                                    const updated = timeslot.members.filter((elem) => (!elem["_id"].equals(userId)))
+                                    Timeslot.updateOne({ _id: timeslot._id }, { $set: { members: updated } }, function (err, res) {
+                                        if (err) console.log(err)
+                                    })
                                 }
                             }
-                        )
-
-                        if (contains_id) {
-                            const updated = timeslot.members.filter((elem) => (!elem["_id"].equals(userId)))
-                            Timeslot.updateOne({ _id: timeslot._id }, { $set: { members: updated } }, function (err, res) {
-                                if (err) console.log(err)
-                            })
-                        }
-                    }
-                    return result.status(204).end()
+                            return result.status(204).end()
+                        })
                 })
         }
     })

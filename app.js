@@ -35,13 +35,11 @@ db.on('disconnected', () => {
 connect_db();
 
 // DEFINE MODEL
-const Book = require('./database/book');
 const Profile = require('./database/profile');
 const Timeslot = require('./database/timeslot');
 const Schedule = require('./database/schedule');
 
 // CONFIGURE: ROUTER
-const router_book = require("./routes/book_api")(app, Book);
 const router_profile = require("./routes/profile_api")(app, Profile);
 const router_schedule = require("./routes/schedule_api")(app, Schedule, Timeslot);
 

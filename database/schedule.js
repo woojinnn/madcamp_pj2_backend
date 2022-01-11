@@ -7,6 +7,18 @@ const scheduleSchema = new Schema({
         type: String,
         required: true,
     },
+    days: {
+        type: [String],
+        required: true
+    },
+    start_time: {
+        type: String,
+        required: true
+    },
+    end_time: {
+        type: String,
+        required: true
+    },
     passwd: {
         type: String,
         default: ""
@@ -14,9 +26,6 @@ const scheduleSchema = new Schema({
     timeslots: {
         type: [Schema.Types.ObjectId],
         ref: 'Timeslot'
-    },
-    days: {
-        type: [String]
     },
     members: {
         type: [Schema.Types.ObjectId],
